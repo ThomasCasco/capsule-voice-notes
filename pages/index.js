@@ -1,4 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
+import { Montserrat } from 'next/font/google'; // Importación correcta
+
+const montserrat = Montserrat({ subsets: ['latin'], weight: ['400', '700'] }); // Configura peso y subset
 
 export default function Home() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -20,7 +24,7 @@ export default function Home() {
       recognitionRef.current = new SpeechRecognition();
 
       recognitionRef.current.lang = 'es-ES';
-      recognitionRef.current.continuous = false;
+      recognitionRef.current.continuous = true;
       recognitionRef.current.interimResults = false;
 
       recognitionRef.current.onresult = (event) => {
@@ -44,6 +48,13 @@ export default function Home() {
       recognitionRef.current.start();
     } else {
       alert('El reconocimiento de voz no está soportado en este navegador.');
+    }
+  };
+
+  const stopListening = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      setListening(false);
     }
   };
 
@@ -126,77 +137,83 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-4 flex flex-col items-center">
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">Comentarios en Capsule</h1>
+    <div className={`${montserrat.className} min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white`}>      
+      <header className="flex flex-col md:flex-row justify-between items-center w-full px-4 py-4 bg-gray-900 shadow-lg">
+        <Image src="/logo.png" alt="Logo de la Empresa" width={100} height={40} />
+        <h1 className="text-lg md:text-xl font-bold mt-2 md:mt-0">Capsule CRM</h1>
+      </header>
 
-      <div className="w-full max-w-md relative">
-        <input
-          type="text"
-          placeholder="Buscar cliente..."
-          className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-        {loading && (
-          <div className="absolute right-4 top-3">
-            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-blue-500"></div>
-          </div>
-        )}
-        {showDropdown && searchResults.length > 0 && (
-          <ul className="absolute top-full left-0 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-2 max-h-60 overflow-auto z-10">
-            {searchResults.map((client) => (
-              <li
-                key={client.id}
-                className="p-3 hover:bg-blue-50 cursor-pointer"
-                onClick={() => handleSelectClient(client)}
-              >
-                {client.name}
-              </li>
-            ))}
-          </ul>
-        )}
-        {searchTerm && !loading && searchResults.length === 0 && (
-          <p className="text-gray-500 mt-2">No se encontraron resultados.</p>
-        )}
-      </div>
-
-      {selectedClient && (
-        <div className="mt-6 w-full max-w-md bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">
-            Cliente seleccionado: {selectedClient.name}
-          </h3>
-          <textarea
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            placeholder="Escribe tu comentario aquí..."
-            className="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+      <main className="p-4 flex flex-col items-center">
+        <div className="max-w-lg w-full bg-gray-800 rounded-xl shadow-lg p-4">
+          <input
+            type="text"
+            placeholder="Buscar cliente..."
+            className="w-full mb-4 p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-red-600"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
           />
-          <div className="flex gap-4 mt-4">
-            <button
-              onClick={startListening}
-              className={`px-4 py-2 text-white rounded-lg ${listening ? 'bg-red-500' : 'bg-blue-500 hover:bg-blue-600'}`}
-            >
-              {listening ? 'Escuchando...' : 'Hablar'}
-            </button>
-            <button
-              onClick={submitComment}
-              className="px-4 py-2 bg-green-500 text-white rounded-lg shadow-md hover:bg-green-600"
-            >
-              Enviar Comentario
-            </button>
-            <button
-              onClick={resetSelection}
-              className="px-4 py-2 bg-gray-500 text-white rounded-lg shadow-md hover:bg-gray-600"
-            >
-              Limpiar Selección
-            </button>
-          </div>
+          {loading && (
+            <div className="flex justify-center items-center mb-4">
+              <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-red-600"></div>
+            </div>
+          )}
+          {showDropdown && searchResults.length > 0 && (
+            <ul className="bg-gray-700 border border-gray-600 rounded-lg shadow max-h-40 overflow-y-auto">
+              {searchResults.map((client) => (
+                <li
+                  key={client.id}
+                  className="p-3 hover:bg-red-600 text-white cursor-pointer"
+                  onClick={() => handleSelectClient(client)}
+                >
+                  {client.name}
+                </li>
+              ))}
+            </ul>
+          )}
+          {selectedClient && (
+            <div className="mt-6">
+              <div className="mb-4 p-3 bg-gray-900 text-white rounded-lg">
+                <strong>Cliente seleccionado:</strong> {selectedClient.name}
+              </div>
+              <textarea
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="Escribe tu comentario aquí..."
+                className="w-full h-24 p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-red-600"
+              ></textarea>
+              <div className="flex flex-col sm:flex-row gap-2 mt-4">
+                <button
+                  onClick={startListening}
+                  className={`w-full sm:w-auto px-4 py-2 rounded-lg text-white font-bold ${listening ? 'bg-red-600' : 'bg-blue-600 hover:bg-red-600'}`}
+                >
+                  {listening ? 'Escuchando...' : 'Hablar'}
+                </button>
+                <button
+                  onClick={stopListening}
+                  className="w-full sm:w-auto px-4 py-2 bg-yellow-500 text-white rounded-lg font-bold hover:bg-yellow-600"
+                >
+                  Detener
+                </button>
+                <button
+                  onClick={submitComment}
+                  className="w-full sm:w-auto px-4 py-2 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700"
+                >
+                  Enviar
+                </button>
+                <button
+                  onClick={resetSelection}
+                  className="w-full sm:w-auto px-4 py-2 bg-red-600 text-white rounded-lg font-bold hover:bg-gray-700"
+                >
+                  Limpiar
+                </button>
+              </div>
+            </div>
+          )}
         </div>
-      )}
-
-      {!selectedClient && (
-        <p className="text-red-500 mt-4">Por favor, selecciona un cliente.</p>
-      )}
+      </main>
+      <footer className="w-full text-center p-4 bg-gray-900 text-white">
+        &copy; 2024 - <img src="/logo.png" alt="Logo de la Empresa" className="inline h-10" />
+      </footer>
     </div>
   );
 }
