@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import { Montserrat } from 'next/font/google'; // Importación correcta
+import { Montserrat } from 'next/font/google';
+// Para íconos, debes instalar react-icons: npm install react-icons
+import { FaMicrophone, FaStop, FaPaperPlane, FaTrashAlt } from 'react-icons/fa';
 
-const montserrat = Montserrat({ subsets: ['latin'], weight: ['400', '700'] }); // Configura peso y subset
+const montserrat = Montserrat({ subsets: ['latin'], weight: ['400', '700'] });
 
 export default function Home() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -12,6 +14,7 @@ export default function Home() {
   const [comment, setComment] = useState('');
   const [listening, setListening] = useState(false);
   const [loading, setLoading] = useState(false);
+
   const recognitionRef = useRef(null);
 
   useEffect(() => {
@@ -20,7 +23,8 @@ export default function Home() {
       typeof window !== 'undefined' &&
       ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)
     ) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const SpeechRecognition =
+        window.SpeechRecognition || window.webkitSpeechRecognition;
       recognitionRef.current = new SpeechRecognition();
 
       recognitionRef.current.lang = 'es-ES';
@@ -91,6 +95,7 @@ export default function Home() {
         setShowDropdown(false);
       }
     }, 300);
+
     return () => clearTimeout(delayDebounce);
   }, [searchTerm]);
 
@@ -137,32 +142,44 @@ export default function Home() {
   };
 
   return (
-    <div className={`${montserrat.className} min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white`}>      
+    <div
+      className={`${montserrat.className} min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white flex flex-col`}
+    >
+      {/* Header */}
       <header className="flex flex-col md:flex-row justify-between items-center w-full px-4 py-4 bg-gray-900 shadow-lg">
-        <Image src="/logo.png" alt="Logo de la Empresa" width={100} height={40} />
-        <h1 className="text-lg md:text-xl font-bold mt-2 md:mt-0">Capsule CRM</h1>
+        <div className="flex items-center gap-2">
+          <Image src="/logo.png" alt="Logo de la Empresa" width={100} height={40} />
+          <h1 className="text-xl md:text-2xl font-bold tracking-wide">Capsule CRM</h1>
+        </div>
+        {/* Puedes colocar aquí algo adicional: menú, enlaces, etc. */}
       </header>
 
-      <main className="p-4 flex flex-col items-center">
-        <div className="max-w-lg w-full bg-gray-800 rounded-xl shadow-lg p-4">
-          <input
-            type="text"
-            placeholder="Buscar cliente..."
-            className="w-full mb-4 p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-red-600"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          {loading && (
-            <div className="flex justify-center items-center mb-4">
-              <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-red-600"></div>
-            </div>
-          )}
+      {/* Main */}
+      <main className="flex-grow p-4 flex flex-col items-center">
+        <div className="max-w-xl w-full bg-gray-800 rounded-xl shadow-lg p-6">
+          {/* Input de búsqueda */}
+          <div className="relative mb-4">
+            <input
+              type="text"
+              placeholder="Buscar cliente..."
+              className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-red-600 transition duration-300"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            {loading && (
+              <div className="absolute right-3 top-3 flex justify-center items-center">
+                <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-red-600"></div>
+              </div>
+            )}
+          </div>
+
+          {/* Dropdown de resultados */}
           {showDropdown && searchResults.length > 0 && (
-            <ul className="bg-gray-700 border border-gray-600 rounded-lg shadow max-h-40 overflow-y-auto">
+            <ul className="bg-gray-700 border border-gray-600 rounded-lg shadow max-h-40 overflow-y-auto mb-4">
               {searchResults.map((client) => (
                 <li
                   key={client.id}
-                  className="p-3 hover:bg-red-600 text-white cursor-pointer"
+                  className="p-3 hover:bg-red-600 hover:cursor-pointer transition-colors duration-300"
                   onClick={() => handleSelectClient(client)}
                 >
                   {client.name}
@@ -170,8 +187,10 @@ export default function Home() {
               ))}
             </ul>
           )}
+
+          {/* Panel de comentario */}
           {selectedClient && (
-            <div className="mt-6">
+            <div className="mt-4">
               <div className="mb-4 p-3 bg-gray-900 text-white rounded-lg">
                 <strong>Cliente seleccionado:</strong> {selectedClient.name}
               </div>
@@ -179,31 +198,47 @@ export default function Home() {
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 placeholder="Escribe tu comentario aquí..."
-                className="w-full h-24 p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-red-600"
+                className="w-full h-24 p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-red-600 transition duration-300"
               ></textarea>
+
               <div className="flex flex-col sm:flex-row gap-2 mt-4">
+                {/* Botón de iniciar/escuchar */}
                 <button
                   onClick={startListening}
-                  className={`w-full sm:w-auto px-4 py-2 rounded-lg text-white font-bold ${listening ? 'bg-red-600' : 'bg-blue-600 hover:bg-red-600'}`}
+                  className={`flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 rounded-lg font-bold transition-colors duration-300 ${
+                    listening
+                      ? 'bg-red-600'
+                      : 'bg-blue-600 hover:bg-blue-700'
+                  }`}
                 >
+                  <FaMicrophone />
                   {listening ? 'Escuchando...' : 'Hablar'}
                 </button>
+
+                {/* Botón de detener */}
                 <button
                   onClick={stopListening}
-                  className="w-full sm:w-auto px-4 py-2 bg-yellow-500 text-white rounded-lg font-bold hover:bg-yellow-600"
+                  className="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 bg-yellow-500 text-white rounded-lg font-bold hover:bg-yellow-600 transition-colors duration-300"
                 >
+                  <FaStop />
                   Detener
                 </button>
+
+                {/* Botón de enviar */}
                 <button
                   onClick={submitComment}
-                  className="w-full sm:w-auto px-4 py-2 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700"
+                  className="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 transition-colors duration-300"
                 >
+                  <FaPaperPlane />
                   Enviar
                 </button>
+
+                {/* Botón de limpiar */}
                 <button
                   onClick={resetSelection}
-                  className="w-full sm:w-auto px-4 py-2 bg-red-600 text-white rounded-lg font-bold hover:bg-gray-700"
+                  className="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition-colors duration-300"
                 >
+                  <FaTrashAlt />
                   Limpiar
                 </button>
               </div>
@@ -211,8 +246,13 @@ export default function Home() {
           )}
         </div>
       </main>
+
+      {/* Footer */}
       <footer className="w-full text-center p-4 bg-gray-900 text-white">
-        &copy; 2024 - <img src="/logo.png" alt="Logo de la Empresa" className="inline h-10" />
+        <div className="flex flex-col items-center md:flex-row md:justify-center gap-2">
+          <span>&copy; 2024 </span>
+          <Image src="/logo.png" alt="Logo de la Empresa" width={80} height={30} />
+        </div>
       </footer>
     </div>
   );
