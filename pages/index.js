@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { Montserrat } from 'next/font/google';
-// Para íconos, debes instalar react-icons: npm install react-icons
 import { FaMicrophone, FaStop, FaPaperPlane, FaTrashAlt } from 'react-icons/fa';
 
 const montserrat = Montserrat({ subsets: ['latin'], weight: ['400', '700'] });
@@ -11,6 +10,7 @@ export default function Home() {
   const [searchResults, setSearchResults] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
+  const [projectName, setProjectName] = useState('');
   const [comment, setComment] = useState('');
   const [listening, setListening] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -18,7 +18,6 @@ export default function Home() {
   const recognitionRef = useRef(null);
 
   useEffect(() => {
-    // Configuración de SpeechRecognition
     if (
       typeof window !== 'undefined' &&
       ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)
@@ -105,36 +104,72 @@ export default function Home() {
     setShowDropdown(false);
   };
 
-  const submitComment = async () => {
-    if (!selectedClient || !comment.trim()) {
-      alert('Selecciona un cliente y escribe un comentario.');
+  const submitProjectAndActivity = async () => {
+    if (!selectedClient || !projectName.trim() || !comment.trim()) {
+      alert('Selecciona un cliente, ingresa un nombre para el proyecto y escribe un comentario.');
       return;
     }
-
+  
     try {
-      const response = await fetch('/api/comentarios', {
+      // Paso 1: Crear el proyecto
+      const projectResponse = await fetch('/api/crearProyecto', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clientId: selectedClient.id, comment }),
+        body: JSON.stringify({
+          clientId: selectedClient.id,
+          projectName,
+        }),
+      });
+  
+      if (!projectResponse.ok) {
+        const errorText = await projectResponse.text();
+        console.error('Error al crear el proyecto:', errorText);
+        alert(`Error al crear el proyecto: ${projectResponse.status}`);
+        return;
+      }
+  
+      const { projectId } = await projectResponse.json();
+      console.log('ID del proyecto creado:', projectId);
+  
+      // Paso 2: Registrar la actividad
+      const activityResponse = await fetch('/api/agregarActividad', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectId,
+          noteContent: comment,
+          projectName,
+        }),
       });
 
-      const responseText = await response.text();
-
-      if (response.ok) {
-        alert('Comentario enviado con éxito');
-        setComment('');
-      } else {
-        console.error('Error en la respuesta del servidor:', responseText);
-        alert(`Error al enviar el comentario: ${response.status} - ${responseText}`);
+      console.log('Datos enviados a comentarios:', {
+        projectId,
+        noteContent: comment,
+        projectName,
+      });
+      
+  
+      if (!activityResponse.ok) {
+        const errorText = await activityResponse.text();
+        console.error('Error al registrar la actividad:', errorText);
+        alert(`Error al registrar la actividad: ${activityResponse.status}`);
+        return;
       }
+  
+      alert('Proyecto y actividad creados con éxito');
+      setProjectName('');
+      setComment('');
+      resetSelection();
     } catch (error) {
-      console.error('Error al enviar el comentario:', error);
-      alert('Error al enviar el comentario. Verifica tu conexión a internet o revisa los logs del servidor.');
+      console.error('Error en el flujo de creación:', error);
+      alert('Error al crear el proyecto o actividad. Revisa los logs.');
     }
   };
+  
 
   const resetSelection = () => {
     setSelectedClient(null);
+    setProjectName('');
     setComment('');
     setSearchTerm('');
     setSearchResults([]);
@@ -145,24 +180,20 @@ export default function Home() {
     <div
       className={`${montserrat.className} min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white flex flex-col`}
     >
-      {/* Header */}
       <header className="flex flex-col md:flex-row justify-between items-center w-full px-4 py-4 bg-gray-900 shadow-lg">
         <div className="flex items-center gap-2">
           <Image src="/logo.png" alt="Logo de la Empresa" width={100} height={40} />
           <h1 className="text-xl md:text-2xl font-bold tracking-wide">Capsule CRM</h1>
         </div>
-        {/* Puedes colocar aquí algo adicional: menú, enlaces, etc. */}
       </header>
 
-      {/* Main */}
       <main className="flex-grow p-4 flex flex-col items-center">
         <div className="max-w-xl w-full bg-gray-800 rounded-xl shadow-lg p-6">
-          {/* Input de búsqueda */}
           <div className="relative mb-4">
             <input
               type="text"
               placeholder="Buscar cliente..."
-              className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-red-600 transition duration-300"
+              className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-red-600"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -173,7 +204,6 @@ export default function Home() {
             )}
           </div>
 
-          {/* Dropdown de resultados */}
           {showDropdown && searchResults.length > 0 && (
             <ul className="bg-gray-700 border border-gray-600 rounded-lg shadow max-h-40 overflow-y-auto mb-4">
               {searchResults.map((client) => (
@@ -188,55 +218,52 @@ export default function Home() {
             </ul>
           )}
 
-          {/* Panel de comentario */}
           {selectedClient && (
             <div className="mt-4">
               <div className="mb-4 p-3 bg-gray-900 text-white rounded-lg">
                 <strong>Cliente seleccionado:</strong> {selectedClient.name}
               </div>
+              <input
+                type="text"
+                placeholder="Nombre del proyecto"
+                className="w-full mb-4 p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-red-600"
+                value={projectName}
+                onChange={(e) => setProjectName(e.target.value)}
+              />
               <textarea
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
-                placeholder="Escribe tu comentario aquí..."
-                className="w-full h-24 p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-red-600 transition duration-300"
+                placeholder="Escribe la descripción del proyecto aquí..."
+                className="w-full h-24 p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-red-600"
               ></textarea>
 
               <div className="flex flex-col sm:flex-row gap-2 mt-4">
-                {/* Botón de iniciar/escuchar */}
                 <button
                   onClick={startListening}
                   className={`flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 rounded-lg font-bold transition-colors duration-300 ${
-                    listening
-                      ? 'bg-red-600'
-                      : 'bg-blue-600 hover:bg-blue-700'
+                    listening ? 'bg-red-600' : 'bg-blue-600 hover:bg-blue-700'
                   }`}
                 >
                   <FaMicrophone />
                   {listening ? 'Escuchando...' : 'Hablar'}
                 </button>
-
-                {/* Botón de detener */}
                 <button
                   onClick={stopListening}
-                  className="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 bg-yellow-500 text-white rounded-lg font-bold hover:bg-yellow-600 transition-colors duration-300"
+                  className="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 bg-yellow-500 text-white rounded-lg font-bold hover:bg-yellow-600"
                 >
                   <FaStop />
                   Detener
                 </button>
-
-                {/* Botón de enviar */}
                 <button
-                  onClick={submitComment}
-                  className="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 transition-colors duration-300"
+                  onClick={submitProjectAndActivity}
+                  className="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700"
                 >
                   <FaPaperPlane />
-                  Enviar
+                  Crear Proyecto y Actividad
                 </button>
-
-                {/* Botón de limpiar */}
                 <button
                   onClick={resetSelection}
-                  className="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition-colors duration-300"
+                  className="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700"
                 >
                   <FaTrashAlt />
                   Limpiar
@@ -247,7 +274,6 @@ export default function Home() {
         </div>
       </main>
 
-      {/* Footer */}
       <footer className="w-full text-center p-4 bg-gray-900 text-white">
         <div className="flex flex-col items-center md:flex-row md:justify-center gap-2">
           <span>&copy; 2024 </span>
